@@ -14,4 +14,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(libuv)
 
 add_executable(MultiDeviceControl main.c)
-target_link_libraries(MultiDeviceControl PRIVATE uv_a)   # static; use `uv` for shared
+target_link_libraries(MultiDeviceControl PRIVATE uv)   # static; use `uv` for shared
