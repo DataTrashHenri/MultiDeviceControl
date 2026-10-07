@@ -7,6 +7,8 @@
 struct sockaddr_in *destination;
 uv_tcp_t *client_socket;
 uv_connect_t* connection;
+uv_loop_t *loop;
+
 bool ISCONNECTED = false;
 
 void on_connect(uv_connect_t* req, int status)
@@ -22,26 +24,32 @@ void on_connect(uv_connect_t* req, int status)
 }
 
 
-void auto_connect(uv_timer_t* handle)
+void auto_connect(uv_timer_t* handle) // every second called regardless
 {
     if (ISCONNECTED) {
-        uv_timer_stop(handle);
+        //uv_timer_stop(handle);
         return;
     }
 
 
     printf("auto_connect\n");
+
+    //re-init tcp needed before new connection attempt
+    free(client_socket);
+    client_socket = malloc(sizeof(uv_tcp_t));
+    uv_tcp_init(loop,client_socket);
+
     uv_tcp_connect(connection, client_socket, (const struct sockaddr*)destination, on_connect);
 }
 
 int main(int argc, char* argv[])
 {
-    uv_loop_t *loop = uv_default_loop();
+    loop = uv_default_loop();
     uv_loop_init(loop);
 
 
-    client_socket = malloc(sizeof(uv_tcp_t));
-    uv_tcp_init(loop, client_socket);
+    //client_socket = malloc(sizeof(uv_tcp_t));
+    // uv_tcp_init(loop, client_socket);
 
     connection = malloc(sizeof(uv_connect_t));
 
