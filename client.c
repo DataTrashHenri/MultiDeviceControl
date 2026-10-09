@@ -4,64 +4,92 @@
 #include <uv.h>
 
 
+struct sockaddr_in *destination;
+uv_tcp_t *client_socket;
+uv_connect_t* connection;
+uv_loop_t *loop;
 
-int counter = 0;
+bool ISCONNECTED = false;
+bool ISCONNECTING = false;
 
-void on_connect(uv_connect_t* req, int status)
-{
-    if (status == 0)
-        printf("Connected successfully to host server\n");
-    else
-        printf("couldnt connect, status= %s(%i)\n",uv_err_name(status),status);
+void on_disconnect(uv_handle_t * handle) {
+    printf("disconnected, will retry\n\n");
+    ISCONNECTING = false;
+    ISCONNECTED = false;
 }
 
-void idle_activity(uv_idle_t* handle)
+void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 {
-    printf("idling...\n");
-    counter++;
-
-    if (counter == 5)
-        uv_idle_stop(handle);
-
+    if (nread > 0) {
+        printf("read %.*s bytes\n",(int)nread, buf->base);
+    }
+    else if (nread < 0) {
+        printf("connection lost %s\n",uv_strerror((int)nread));
+        uv_close((uv_handle_t*)stream, on_disconnect);
+    }
+    else if (nread == 0) {
+        printf("connection closed\n");
+        ISCONNECTED = false;
+    }
 
 }
 
-void timer_activity(uv_timer_t* handle)
-{
-    printf("aaah timer\n");
+void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+    buf->base = malloc(suggested_size);
+    buf->len = suggested_size;
 }
+void on_connect(uv_connect_t* req,const int status)
+{
+    if (status != 0) {
+        printf("couldn't connect: %s (%d)\n", uv_err_name(status), status);
+        uv_close((uv_handle_t *)client_socket, on_disconnect);
+        return;
+    }
+    printf("Connected successfully to host server\n\n");
+    ISCONNECTED = true;
+    int r = uv_read_start((uv_stream_t *)client_socket, alloc_cb, read_cb);
+    if (r < 0) {
+        printf("read_start failed: %s\n", uv_strerror(r));
+        uv_close((uv_handle_t *)client_socket, on_disconnect);
+    }
+}
+
+void auto_connect(uv_timer_t* handle) // every second called regardless
+{
+    if (ISCONNECTED || ISCONNECTING) return;
+    ISCONNECTING = true;
+    printf("auto_connect\n");
+
+    //re-init tcp needed before new connection attempt
+    uv_tcp_init(loop,client_socket);
+    if (uv_tcp_connect(connection, client_socket, (const struct sockaddr*)destination, on_connect)<0)
+    {
+        printf("connection failed right away.\n");
+        uv_close((uv_handle_t*)client_socket, on_disconnect);
+    }
+}
+
 
 int main(int argc, char* argv[])
 {
-    uv_loop_t *loop = uv_default_loop();
+    loop = uv_default_loop();
     uv_loop_init(loop);
 
+    connection = malloc(sizeof(uv_connect_t));
+    client_socket = malloc(sizeof(uv_tcp_t));
 
-    uv_tcp_t* socket = malloc(sizeof(uv_tcp_t));
-    uv_tcp_init(loop, socket);
+    destination = malloc(sizeof(struct sockaddr_in));
+    uv_ip4_addr("127.0.0.1", 1415, destination);
 
-    uv_connect_t* connect = malloc(sizeof(uv_connect_t));
-
-    struct sockaddr_in *dest = malloc(sizeof(struct sockaddr_in));
-    uv_ip4_addr("127.0.0.1", 1415, dest);
-    uv_tcp_connect(connect, socket, (const struct sockaddr*)dest, on_connect);
-
-    uv_idle_t *idle = malloc(sizeof(uv_idle_t));
-    uv_idle_init(loop,idle);
-    uv_idle_start(idle,idle_activity);
-
-    uv_timer_t *timer = malloc(sizeof(uv_timer_t));
-    uv_timer_init(loop,timer);
-    uv_timer_start(timer,timer_activity,5000,1000);
-
-
-
+    uv_timer_t *auto_login_timer = malloc(sizeof(uv_timer_t));
+    uv_timer_init(loop,auto_login_timer);
+    uv_timer_start(auto_login_timer,auto_connect,1000,1000);
 
     uv_run(loop, UV_RUN_DEFAULT);
     uv_loop_close(loop);
 
-    free(socket);
-    free(connect);
-    free(dest);
+    free(client_socket);
+    free(connection);
+    free(destination);
     return 0;
 }
