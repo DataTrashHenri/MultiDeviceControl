@@ -13,8 +13,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(libuv)
 
-add_executable(client client.c)
-add_executable(server server.c)
+add_executable(client agent/main.c)
+add_executable(server host/main.c)
 
 target_link_libraries(client PRIVATE uv)   # static; use `uv` for shared
 target_link_libraries(server PRIVATE uv)   # static; use `uv` for shared
