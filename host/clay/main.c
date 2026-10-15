@@ -4,6 +4,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+const static Clay_Color bg_color                = {14,  15,  18,  255}; // #0E0F12
+const static Clay_Color titlebar_color          = {21,  23,  27,  255}; // #15171B
+const static Clay_Color clientcard_bg_color     = {27,  30,  35,  255}; // #1B1E23
+const static Clay_Color clientcard_title_color  = {230, 232, 235, 255}; // #E6E8EB
+const static Clay_Color text_muted_color        = {139, 145, 154, 255}; // #8B919A
 
 void HandleClayErrors(Clay_ErrorData e) {
     printf("%s\n", e.errorText.chars);
@@ -66,20 +71,20 @@ int main(void) {
                 .childAlignment =  {CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_TOP},
                 .childGap = 8
             },
-            .backgroundColor = {30, 30, 40, 255}
+            .backgroundColor = bg_color
         }) {
             //childs
             CLAY({
                 .id = CLAY_ID("Titlebar"),
                 .layout = { .sizing = { CLAY_SIZING_PERCENT(1), CLAY_SIZING_FIXED(60) }, .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER }},
-                .backgroundColor = (Clay_Color){60, 120, 220, 255},
+                .backgroundColor = titlebar_color,
                 .cornerRadius = CLAY_CORNER_RADIUS(4),
             }) {
-                CLAY_TEXT(CLAY_STRING("MDC - Multi Device Management"),CLAY_TEXT_CONFIG({
+                CLAY_TEXT(CLAY_STRING("MDC - Multi Device Control"),CLAY_TEXT_CONFIG({
                     .fontId = 0,
                     .fontSize = 24,
                     .letterSpacing = 1,
-                    .textColor = {255,255,255,255},
+                    .textColor = text_muted_color,
                 }));
             }
             CLAY({
@@ -87,19 +92,46 @@ int main(void) {
             .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .childGap = 4,
-                .sizing = {CLAY_SIZING_GROW(0),CLAY_SIZING_FIXED(150) },
+                .sizing = {CLAY_SIZING_GROW(0),CLAY_SIZING_FIXED(200) },
             },
             .clip = {.horizontal = true, .childOffset = Clay_GetScrollOffset()}
             }) {
+                // CLIENT CARDS
                 for (int i = 0; i < 3; i++) {
                     CLAY({
                          //.id = CLAY_ID("Client 1"),
-                         .layout = { .sizing = {CLAY_SIZING_FIT(400), CLAY_SIZING_GROW(0)}},
-                         .backgroundColor = (Clay_Color){10, 80, 30, 255},
-                         .cornerRadius = CLAY_CORNER_RADIUS(8)
-                         }) {}
+                         .layout = {
+                             .sizing = {CLAY_SIZING_FIT(400), CLAY_SIZING_GROW(0)},
+                             .childAlignment = CLAY_ALIGN_X_CENTER,
+                             //.childGap = 8
+                             .padding = CLAY_PADDING_ALL(4),
+                         },
+                         .backgroundColor =clientcard_bg_color,
+                         .cornerRadius = CLAY_CORNER_RADIUS(8),
+
+                    }) {
+                        CLAY({
+                        .layout = {
+                            .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(50)},
+                            .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER},
+
+                        },
+                        .backgroundColor = clientcard_title_color,
+                        .cornerRadius = 4
+                        }) {
+
+                        }
+                    }
                 }
             }
+            CLAY({
+                .id = CLAY_ID("stats"),
+                .layout = {
+                    .sizing = {CLAY_SIZING_GROW(0),CLAY_SIZING_GROW(0)}
+                },
+                .cornerRadius = 4,
+                .backgroundColor = titlebar_color
+            }){}
 
         }
         //--------------------------------------------------------------------------------
